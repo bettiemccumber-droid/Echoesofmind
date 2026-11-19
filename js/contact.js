@@ -25,28 +25,3 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 500);
     });
 });
-
-// Mobile Menu
-const hamburger = document.querySelector('.hamburger');
-const navMenu = document.querySelector('.nav-menu');
-
-if (hamburger) {
-    hamburger.addEventListener('click', () => {
-        navMenu.classList.toggle('active');
-    });
-}
-
-// Back to Top
-const backToTopButton = document.getElementById('back-to-top');
-
-window.addEventListener('scroll', () => {
-    if (window.pageYOffset > 300) {
-        backToTopButton.classList.add('show');
-    } else {
-        backToTopButton.classList.remove('show');
-    }
-});
-
-backToTopButton.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-});
