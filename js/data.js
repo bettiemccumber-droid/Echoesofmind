@@ -2,6 +2,7 @@
 const articles = [
     {
         id: 1,
+        slug: "the-future-of-artificial-intelligence-in-2026",
         title: "The Future of Artificial Intelligence in 2026",
         category: "technology",
         date: "2026-04-05",
@@ -79,6 +80,7 @@ const articles = [
     },
     {
         id: 2,
+        slug: "top-10-productivity-apps-you-need-in-2026",
         title: "Top 10 Productivity Apps You Need in 2026",
         category: "product-reviews",
         date: "2026-03-28",
@@ -213,6 +215,7 @@ const articles = [
     },
     {
         id: 3,
+        slug: "sustainable-living-simple-changes-for-a-better-planet",
         title: "Sustainable Living: Simple Changes for a Better Planet",
         category: "lifestyle",
         date: "2026-03-15",
@@ -326,6 +329,7 @@ const articles = [
     },
     {
         id: 4,
+        slug: "notion-vs-obsidian-which-note-taking-platform-is-right-for-you",
         title: "Notion vs. Obsidian: Which Note-Taking Platform is Right for You?",
         category: "platform-reviews",
         date: "2026-03-01",
@@ -354,6 +358,7 @@ const articles = [
     },
     {
         id: 5,
+        slug: "mental-health-in-the-digital-age-finding-balance",
         title: "Mental Health in the Digital Age: Finding Balance",
         category: "health",
         date: "2026-02-20",
@@ -385,6 +390,7 @@ const articles = [
     },
     {
         id: 6,
+        slug: "best-wireless-earbuds-of-2026-comprehensive-review",
         title: "Best Wireless Earbuds of 2026: Comprehensive Review",
         category: "product-reviews",
         date: "2026-02-10",
@@ -503,6 +509,7 @@ const articles = [
     },
     {
         id: 7,
+        slug: "the-rise-of-remote-work-tools-and-best-practices",
         title: "The Rise of Remote Work: Tools and Best Practices",
         category: "technology",
         date: "2026-02-05",
@@ -537,6 +544,7 @@ const articles = [
     },
     {
         id: 8,
+        slug: "minimalist-home-design-less-is-more",
         title: "Minimalist Home Design: Less is More",
         category: "lifestyle",
         date: "2026-02-15",
@@ -570,6 +578,7 @@ const articles = [
     },
     {
         id: 9,
+        slug: "cloud-storage-showdown-comparing-top-providers",
         title: "Cloud Storage Showdown: Comparing Top Providers",
         category: "platform-reviews",
         date: "2026-03-10",
@@ -609,6 +618,7 @@ const articles = [
     },
     {
         id: 10,
+        slug: "nutrition-myths-debunked-what-science-really-says",
         title: "Nutrition Myths Debunked: What Science Really Says",
         category: "health",
         date: "2026-03-22",
@@ -702,3 +712,219 @@ const products = [
         description: "Control all your smart devices from one central hub. Voice control and automation features included."
     }
 ];
+
+/**
+ * Build the article detail URL. Prefer slug so API-published posts work.
+ * @param {{ slug?: string, id?: number|string }} article
+ * @returns {string}
+ */
+function articleHref(article) {
+  if (article && typeof article.slug === "string" && article.slug) {
+    return "article.html?slug=" + encodeURIComponent(article.slug);
+  }
+  return "article.html?id=" + encodeURIComponent(String(article && article.id != null ? article.id : ""));
+}
+
+/**
+ * Find an article by slug or numeric id.
+ * @param {string|null} slug
+ * @param {number|null} id
+ * @returns {Object|undefined}
+ */
+function findArticle(slug, id) {
+  if (slug) {
+    const bySlug = articles.find((item) => item.slug === slug);
+    if (bySlug) return bySlug;
+  }
+  if (id != null && !Number.isNaN(id)) {
+    return articles.find((item) => item.id === id);
+  }
+  return undefined;
+}
+
+/**
+ * Copy the list fields used by articles. Body HTML is loaded separately.
+ * @param {Object} post - Post from GET /api/posts
+ * @returns {Object}
+ */
+function publishedListFields(post) {
+  return {
+    id: post.id,
+    slug: post.slug,
+    title: post.title,
+    category: post.category,
+    date: post.date,
+    image: post.image || "",
+    excerpt: post.excerpt || "",
+    author: post.author || "Echoesofmind",
+    readTime: post.readTime
+  };
+}
+
+/**
+ * Merge API posts into articles. Same slug keeps API list fields
+ * and any HTML already attached from static content.
+ * @param {Array<Object>} remotePosts
+ */
+function mergePublishedPosts(remotePosts) {
+  if (!Array.isArray(remotePosts)) return;
+
+  /** @type {Map<string, Object>} */
+  const incoming = new Map();
+  remotePosts.forEach((post) => {
+    if (!post || typeof post.slug !== "string" || !post.slug) return;
+    incoming.set(post.slug, publishedListFields(post));
+  });
+
+  for (let index = 0; index < articles.length; index += 1) {
+    const remote = incoming.get(articles[index].slug);
+    if (!remote) continue;
+    const staticContent = articles[index].content;
+    articles[index] = { ...articles[index], ...remote };
+    if (staticContent) articles[index].content = staticContent;
+    incoming.delete(remote.slug);
+  }
+
+  incoming.forEach((post) => {
+    articles.push(post);
+  });
+}
+
+/** @type {Promise<void>|null} */
+let publishedPostsPromise = null;
+
+/**
+ * Fetch GET /api/posts and merge. A failed request leaves the static list in place.
+ * @returns {Promise<void>}
+ */
+function loadPublishedPosts() {
+  if (!publishedPostsPromise) {
+    publishedPostsPromise = fetchAndMergePublishedPosts();
+  }
+  return publishedPostsPromise;
+}
+
+/**
+ * @returns {Promise<void>}
+ */
+async function fetchAndMergePublishedPosts() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const response = await fetch("/api/posts", { cache: "no-store", signal: controller.signal });
+    if (!response.ok) return;
+    const data = await response.json();
+    mergePublishedPosts(Array.isArray(data) ? data : data.posts);
+  } catch (error) {
+    console.error("Published posts unavailable, showing static articles.", error);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Load body HTML + image gallery for one API-published article.
+ * @param {string} slug
+ * @returns {Promise<{ bodyHtml: string, image: string, images: string[] }|null>}
+ */
+async function loadPublishedArticle(slug) {
+  const response = await fetch("/api/posts/" + encodeURIComponent(slug), { cache: "no-store" });
+  if (!response.ok) return null;
+  const data = await response.json();
+  if (typeof data === "string") {
+    return { bodyHtml: data, image: "", images: [] };
+  }
+  const bodyHtml = typeof data?.bodyHtml === "string" ? data.bodyHtml : "";
+  const images = Array.isArray(data?.images)
+    ? data.images.filter((item) => typeof item === "string" && item)
+    : [];
+  const image = typeof data?.image === "string" ? data.image : (images[0] || "");
+  return { bodyHtml, image, images };
+}
+
+/**
+ * Load body HTML for one API-published article.
+ * @param {string} slug
+ * @returns {Promise<string|null>}
+ */
+async function loadPublishedBody(slug) {
+  const article = await loadPublishedArticle(slug);
+  return article ? article.bodyHtml : null;
+}
+
+/**
+ * Spread missing image URLs through the article body (between paragraphs / headings).
+ * Never stacks them in one gallery block at the end.
+ * @param {string} bodyHtml
+ * @param {string[]} images
+ * @param {string} [title]
+ * @param {{ coverUrl?: string }} [options] - skip cover when it is already shown in the header
+ * @returns {string}
+ */
+function weaveImagesIntoContent(bodyHtml, images, title, options) {
+  if (!Array.isArray(images) || images.length === 0) return bodyHtml || "";
+
+  const html = String(bodyHtml || "");
+  const coverUrl = options && typeof options.coverUrl === "string" ? options.coverUrl : "";
+  const missing = images.filter((url) => (
+    typeof url === "string"
+    && url
+    && !html.includes(url)
+    && url !== coverUrl
+  ));
+  if (missing.length === 0) return html;
+
+  const figureHtml = (url, index) => {
+    const alt = title ? `${title} — photo ${index + 1}` : `Article photo ${index + 1}`;
+    return `<figure class="article-figure"><img src="${url}" alt="${alt}" loading="lazy"></figure>`;
+  };
+
+  const blocks = html.split(/(?<=<\/(?:p|h2|h3|h4|ul|ol|blockquote)>)/i).filter((part) => part.trim());
+  if (blocks.length === 0) {
+    return missing.map((url, index) => figureHtml(url, index)).join("") + html;
+  }
+
+  const positions = evenlySpacedInsertPositions(blocks.length, missing.length);
+  /** @type {Map<number, string[]>} */
+  const byBlock = new Map();
+  missing.forEach((url, index) => {
+    const at = positions[index];
+    if (!byBlock.has(at)) byBlock.set(at, []);
+    byBlock.get(at).push(figureHtml(url, index));
+  });
+
+  let result = "";
+  blocks.forEach((block, index) => {
+    result += block;
+    const figures = byBlock.get(index);
+    if (figures) result += figures.join("");
+  });
+  return result;
+}
+
+/**
+ * Pick distinct "after block N" slots so 3–5 images sit apart through the article.
+ * @param {number} blockCount
+ * @param {number} imageCount
+ * @returns {number[]}
+ */
+function evenlySpacedInsertPositions(blockCount, imageCount) {
+  const positions = [];
+  const used = new Set();
+
+  for (let i = 0; i < imageCount; i += 1) {
+    let idx = Math.floor(((i + 1) * blockCount) / (imageCount + 1)) - 1;
+    idx = Math.max(0, Math.min(blockCount - 1, idx));
+
+    let guard = 0;
+    while (used.has(idx) && guard < blockCount) {
+      idx = (idx + 1) % blockCount;
+      guard += 1;
+    }
+    used.add(idx);
+    positions.push(idx);
+  }
+
+  return positions;
+}
+

@@ -49,11 +49,6 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
-// Display Latest Posts on Home Page
-if (document.getElementById('home-posts')) {
-    displayHomePosts();
-}
-
 function displayHomePosts() {
     const postsContainer = document.getElementById('home-posts');
     const sortedArticles = [...articles].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -64,7 +59,7 @@ function displayHomePosts() {
 
 function createPostCard(article) {
     return `
-        <div class="post-card" onclick="window.location.href='article.html?id=${article.id}'">
+        <div class="post-card" onclick="window.location.href='${articleHref(article)}'">
             <img src="${article.image}" alt="${article.title}">
             <div class="post-card-content">
                 <span class="post-category">${formatCategory(article.category)}</span>
@@ -89,6 +84,15 @@ function formatDate(dateString) {
     return new Date(dateString).toLocaleDateString('en-US', options);
 }
 
+function observeAnimatedElements(selector) {
+    document.querySelectorAll(selector).forEach((el) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(el);
+    });
+}
+
 // Intersection Observer for Animations
 const observerOptions = {
     threshold: 0.1,
@@ -104,13 +108,12 @@ const observer = new IntersectionObserver((entries) => {
     });
 }, observerOptions);
 
-// Observe elements for animation
-document.addEventListener('DOMContentLoaded', () => {
-    const animatedElements = document.querySelectorAll('.feature-card, .post-card, .product-card');
-    animatedElements.forEach(el => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(20px)';
-        el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-        observer.observe(el);
-    });
+// Home posts + page animations
+document.addEventListener('DOMContentLoaded', async () => {
+    if (document.getElementById('home-posts')) {
+        await loadPublishedPosts();
+        displayHomePosts();
+    }
+
+    observeAnimatedElements('.feature-card, .post-card, .product-card');
 });

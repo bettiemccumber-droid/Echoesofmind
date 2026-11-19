@@ -1,9 +1,11 @@
 let currentPage = 1;
 const postsPerPage = 6;
-let filteredArticles = [...articles];
+let filteredArticles = [];
 
 // Initialize blog page
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadPublishedPosts();
+    filteredArticles = [...articles];
     displayPosts();
     setupEventListeners();
 });
@@ -59,7 +61,7 @@ function displayPosts() {
 
 function createPostCard(article) {
     return `
-        <div class="post-card" onclick="window.location.href='article.html?id=${article.id}'">
+        <div class="post-card" onclick="window.location.href='${articleHref(article)}'">
             <img src="${article.image}" alt="${article.title}">
             <div class="post-card-content">
                 <span class="post-category">${formatCategory(article.category)}</span>

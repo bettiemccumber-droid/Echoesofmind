@@ -1281,10 +1281,38 @@ a {
     font-size: 0.9rem;
 }
 
-/* Enhanced Article Content */
+/* Enhanced Article Content — multi-image friendly */
 .article-content img {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    margin: 1.5rem auto;
     border-radius: 10px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.article-content figure {
+    margin: 1.75rem 0;
+}
+
+.article-content figure img {
+    margin-bottom: 0.5rem;
+}
+
+.article-content figcaption {
+    font-size: 0.95rem;
+    color: #666;
+    text-align: center;
+}
+
+/* Single full-width figures woven between paragraphs — not a stacked gallery */
+.article-content .article-figure {
+    margin: 2.25rem 0;
+}
+
+.article-content .article-figure img {
+    margin: 0;
 }
 
 /* Improved Pagination */
